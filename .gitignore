@@ -1,0 +1,10 @@
+# Generated data / outputs (rebuilt by token_accumulator.py)
+token_store.json
+spend.csv
+accumulator.log
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
