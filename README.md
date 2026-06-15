@@ -10,6 +10,15 @@ python3 token_accumulator.py > spend.csv
 Stdout is `month,tokens` CSV; a coverage report (and any pruning warnings) go
 to stderr.
 
+For a day-by-day breakdown, pass `--by day` (stdout becomes `date,tokens`):
+
+```
+python3 token_accumulator.py --by day > spend-daily.csv
+```
+
+Both views read the same store — the monthly numbers are just the daily ones
+summed by calendar month — so neither re-harvests differently.
+
 ## Why it works the way it does
 
 The obvious source — the `/usage` → Stats tab and its file

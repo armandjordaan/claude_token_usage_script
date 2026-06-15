@@ -29,7 +29,8 @@ DEFINITIONS / CAVEATS
     aggregate and time-bucket slightly differently.
 
 OUTPUT
-    month,tokens CSV on stdout; a coverage report on stderr.
+    A two-column CSV on stdout (``month,tokens`` by default, or ``date,tokens``
+    with ``--by day``); a coverage report on stderr.
 """
 
 from __future__ import annotations
@@ -175,6 +176,15 @@ def monthly_totals(store_days: dict) -> dict[str, int]:
     return dict(by_month)
 
 
+def daily_totals(store_days: dict) -> dict[str, int]:
+    """Per-calendar-day input+output, keyed by ``YYYY-MM-DD``.
+
+    The store is already day-granular, so this just projects out the inout
+    total -- the monthly CSV is the same numbers summed over ``date[:7]``.
+    """
+    return {date: rec["inout"] for date, rec in store_days.items()}
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--store", type=Path, default=DEFAULT_STORE,
@@ -187,6 +197,8 @@ def main(argv: list[str]) -> int:
                     help="report from the existing store without reading transcripts")
     ap.add_argument("--no-seed", action="store_true",
                     help="do not merge stats-cache.json")
+    ap.add_argument("--by", choices=("month", "day"), default="month",
+                    help="CSV granularity: calendar month (default) or calendar day")
     args = ap.parse_args(argv[1:])
 
     if args.store.exists():
@@ -251,12 +263,15 @@ def main(argv: list[str]) -> int:
     )
     print("\n".join(lines), file=sys.stderr)
 
-    # ---- monthly CSV (stdout) ----
-    months = monthly_totals(days)
+    # ---- CSV (stdout): one row per month (default) or per day (--by day) ----
+    if args.by == "day":
+        totals, header = daily_totals(days), "date"
+    else:
+        totals, header = monthly_totals(days), "month"
     writer = csv.writer(sys.stdout)
-    writer.writerow(["month", "tokens"])
-    for month in sorted(months):
-        writer.writerow([month, months[month]])
+    writer.writerow([header, "tokens"])
+    for key in sorted(totals):
+        writer.writerow([key, totals[key]])
     return 0
 
 

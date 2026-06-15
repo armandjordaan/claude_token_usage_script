@@ -10,7 +10,8 @@ as CSV. The one tool is `token_accumulator.py`; everything else is docs.
 ## Run / dev
 
 - Run: `python3 token_accumulator.py > spend.csv` — CSV (`month,tokens`) to
-  stdout, a coverage report to stderr.
+  stdout, a coverage report to stderr. `--by day` switches stdout to
+  `date,tokens` (same store, day granularity).
 - **Python standard library only** — no third-party deps, no virtualenv.
   Developed/tested on Python 3.12. Keep it dependency-free unless there's a
   strong reason.

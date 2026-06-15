@@ -16,6 +16,10 @@ _Avoid_: grand total
 **Monthly token spend**:
 **Token spend** aggregated by calendar month (`YYYY-MM`).
 
+**Daily token spend**:
+**Token spend** for a single calendar day (`YYYY-MM-DD`) — the store's native
+granularity. **Monthly token spend** is this summed over each month.
+
 **Cache tokens**:
 `cacheReadInputTokens + cacheCreationInputTokens`; deliberately **excluded** from **Token spend**.
 _Avoid_: prompt-cache usage
