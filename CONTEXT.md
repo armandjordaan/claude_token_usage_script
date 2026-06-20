@@ -13,6 +13,13 @@ _Avoid_: cost (means dollars), usage (overloaded — see Flagged ambiguities)
 All-time **Token spend** summed across every model — the headline figure shown on the Stats tab.
 _Avoid_: grand total
 
+**Input / output split**:
+The breakdown of **Token spend** into `inputTokens` and `outputTokens`. Only the
+transcripts carry it; `stats-cache.json` stores just the combined per-model
+total, so for days seeded from the cache the split is **unavailable** (reported
+blank, never zero — see Flagged ambiguities). `input + output` ≤ **Token spend**
+for any period that includes such days.
+
 **Monthly token spend**:
 **Token spend** aggregated by calendar month (`YYYY-MM`).
 
@@ -44,3 +51,4 @@ A per-model record of tokens consumed by Claude Code.
 
 - "spend" was ambiguous between **dollars** and **tokens** — resolved: it means **tokens**; USD cost is not tracked.
 - "usage" is overloaded between plan-limit consumption (the `/usage` → **Usage** tab: session/weekly quota) and historical **Token spend** (the **Stats** tab). This project deals only with the Stats-tab token counts.
+- A blank `input`/`output` cell means the split is **unknown** for that period (cache-only days), *not* zero — the two are deliberately distinguished in the CSV.

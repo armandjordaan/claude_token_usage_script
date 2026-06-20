@@ -29,8 +29,11 @@ DEFINITIONS / CAVEATS
     aggregate and time-bucket slightly differently.
 
 OUTPUT
-    A two-column CSV on stdout (``month,tokens`` by default, or ``date,tokens``
-    with ``--by day``); a coverage report on stderr.
+    A CSV on stdout -- ``month,tokens,input,output`` by default, or
+    ``date,tokens,input,output`` with ``--by day``. ``tokens`` is the total;
+    ``input``/``output`` break it down where a transcript-derived split exists
+    and are left blank for older cache-only days (the split is unrecoverable
+    there). A coverage report goes to stderr.
 """
 
 from __future__ import annotations
@@ -169,20 +172,26 @@ def merge_into(store_days: dict, fresh: dict) -> None:
             store_days[date] = rec
 
 
-def monthly_totals(store_days: dict) -> dict[str, int]:
-    by_month: dict[str, int] = defaultdict(int)
-    for date, rec in store_days.items():
-        by_month[date[:7]] += rec["inout"]
-    return dict(by_month)
+def aggregate(store_days: dict, by: str) -> dict[str, dict]:
+    """Roll the store up by ``"month"`` (``YYYY-MM``) or ``"day"`` (``YYYY-MM-DD``).
 
-
-def daily_totals(store_days: dict) -> dict[str, int]:
-    """Per-calendar-day input+output, keyed by ``YYYY-MM-DD``.
-
-    The store is already day-granular, so this just projects out the inout
-    total -- the monthly CSV is the same numbers summed over ``date[:7]``.
+    Returns ``{key: {"tokens", "input", "output"}}``. ``tokens`` is always the
+    authoritative input+output total. ``input``/``output`` are summed only over
+    days that carry a transcript-derived split; a key with no such day reports
+    them as ``None`` (cache-only history never stored the split -- it's
+    unrecoverable, so the CSV leaves those cells blank rather than guess 0).
+    For a month mixing transcript and cache days, ``input + output`` is the
+    known portion and is therefore < ``tokens``.
     """
-    return {date: rec["inout"] for date, rec in store_days.items()}
+    keylen = 7 if by == "month" else 10
+    agg: dict[str, dict] = {}
+    for date, rec in store_days.items():
+        row = agg.setdefault(date[:keylen], {"tokens": 0, "input": None, "output": None})
+        row["tokens"] += rec["inout"]
+        if "input" in rec and "output" in rec:
+            row["input"] = (row["input"] or 0) + rec["input"]
+            row["output"] = (row["output"] or 0) + rec["output"]
+    return agg
 
 
 def main(argv: list[str]) -> int:
@@ -261,17 +270,27 @@ def main(argv: list[str]) -> int:
         "# tokens = input+output (cache excluded, subagents included); "
         "current day is partial until UTC midnight"
     )
+    if days:
+        nosplit = sum(rec["inout"] for rec in days.values() if "input" not in rec)
+        if nosplit:
+            lines.append(
+                f"# input/output columns blank for {len(days) - tx_days} cache-only "
+                f"days ({nosplit} tokens) -- split unrecoverable, total still counted"
+            )
     print("\n".join(lines), file=sys.stderr)
 
     # ---- CSV (stdout): one row per month (default) or per day (--by day) ----
-    if args.by == "day":
-        totals, header = daily_totals(days), "date"
-    else:
-        totals, header = monthly_totals(days), "month"
+    rows = aggregate(days, args.by)
+    header = "date" if args.by == "day" else "month"
     writer = csv.writer(sys.stdout)
-    writer.writerow([header, "tokens"])
-    for key in sorted(totals):
-        writer.writerow([key, totals[key]])
+    writer.writerow([header, "tokens", "input", "output"])
+    for key in sorted(rows):
+        r = rows[key]
+        writer.writerow([
+            key, r["tokens"],
+            "" if r["input"] is None else r["input"],
+            "" if r["output"] is None else r["output"],
+        ])
     return 0
 
 

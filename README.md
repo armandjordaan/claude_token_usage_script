@@ -7,10 +7,11 @@ calendar month, as CSV.
 python3 token_accumulator.py > spend.csv
 ```
 
-Stdout is `month,tokens` CSV; a coverage report (and any pruning warnings) go
-to stderr.
+Stdout is `month,tokens,input,output` CSV; a coverage report (and any pruning
+warnings) go to stderr.
 
-For a day-by-day breakdown, pass `--by day` (stdout becomes `date,tokens`):
+For a day-by-day breakdown, pass `--by day` (stdout becomes
+`date,tokens,input,output`):
 
 ```
 python3 token_accumulator.py --by day > spend-daily.csv
@@ -18,6 +19,18 @@ python3 token_accumulator.py --by day > spend-daily.csv
 
 Both views read the same store — the monthly numbers are just the daily ones
 summed by calendar month — so neither re-harvests differently.
+
+### The `input` / `output` columns
+
+`tokens` is the total; `input` and `output` break it down. The split comes from
+the transcripts, so it's only available for days captured while their transcript
+was still around (recent days, and going forward, every day). **Older days
+backfilled from the stats cache are left blank** — that source only ever stored
+the combined per-model total, and once a day's transcript prunes the split is
+unrecoverable. So for a month mixing the two, `input + output` is the *known*
+portion and can be less than `tokens`; a wholly cache-only month shows blank
+`input`/`output` with a real `tokens`. The stderr report says how many days (and
+how many tokens) lack the split.
 
 ## Why it works the way it does
 
